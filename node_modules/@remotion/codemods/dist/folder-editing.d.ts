@@ -1,0 +1,50 @@
+import type { File, JSXElement } from '@babel/types';
+import * as recast from 'recast';
+import type { CodemodProject } from './codemod-project';
+import type { FolderReference } from './composition-editing';
+import { type CodemodInsertionResult, type CodemodNodeResult, type NodeReference } from './node-references';
+export type CompositionTreeItem = {
+    type: 'composition';
+    compositionId: string;
+} | ({
+    type: 'folder';
+} & FolderReference);
+export type CompositionDestination = {
+    type: 'root';
+} | {
+    type: 'folder';
+    folder: FolderReference;
+} | {
+    type: 'before' | 'after';
+    target: CompositionTreeItem;
+};
+export type TreeEntry = {
+    item: CompositionTreeItem;
+    parentName: string | null;
+    node: JSXElement;
+    path: recast.types.NodePath;
+    directJsxChild: boolean;
+};
+export declare const getTreeEntries: ({ ast }: {
+    ast: File;
+}) => TreeEntry[];
+export declare const requireTreeItem: (entries: TreeEntry[], item: CompositionTreeItem) => TreeEntry;
+export declare const getRegistrationInsertionResult: ({ project, filePath, input, output, inserted, }: {
+    project: CodemodProject;
+    filePath: string;
+    input: string;
+    output: string;
+    inserted: CompositionTreeItem | {
+        type: 'last-child';
+        folder: FolderReference | null;
+    };
+}) => CodemodInsertionResult;
+export declare const moveTreeItem: <Project extends CodemodProject>({ project, compositionFile, source, destination, destinationFile, }: {
+    project: Project;
+    compositionFile: string;
+    source: CompositionTreeItem;
+    destination: CompositionDestination;
+    destinationFile: string | null;
+}) => CodemodNodeResult & {
+    updatedNode: NodeReference;
+};

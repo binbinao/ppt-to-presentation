@@ -1,0 +1,9 @@
+import type { RefObject } from 'react';
+export declare const useRequestVideoCallbackTime: ({ mediaRef, mediaType, lastSeek, onVariableFpsVideoDetected, }: {
+    mediaRef: RefObject<HTMLVideoElement | HTMLAudioElement | null>;
+    mediaType: 'video' | 'audio';
+    lastSeek: React.RefObject<number | null>;
+    onVariableFpsVideoDetected: () => void;
+}) => RefObject<{
+    time: number;
+} | null>;

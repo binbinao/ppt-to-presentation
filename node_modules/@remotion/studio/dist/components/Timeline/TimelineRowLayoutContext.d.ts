@@ -1,0 +1,11 @@
+type TimelineRowLayout = {
+    readonly basePadding: number;
+    readonly highlightContainingSelection: boolean;
+    readonly highlightSelectedLabel: boolean;
+    readonly keyframeControlsPadding: number;
+    readonly rowBorderRadius: number;
+    readonly rowHorizontalMargin: number;
+};
+export declare const INSPECTOR_TIMELINE_ROW_LAYOUT: TimelineRowLayout;
+export declare const TimelineRowLayoutContext: import("react").Context<TimelineRowLayout>;
+export {};

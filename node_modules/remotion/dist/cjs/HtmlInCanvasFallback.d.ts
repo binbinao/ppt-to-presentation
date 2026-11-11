@@ -1,0 +1,7 @@
+import React from 'react';
+export declare const HtmlInCanvasFallback: React.FC<{
+    readonly children: React.ReactNode;
+    readonly style: React.CSSProperties;
+    readonly label: string;
+    readonly title?: string;
+}>;

@@ -1,0 +1,9 @@
+import type { File } from '@babel/types';
+import * as recast from 'recast';
+export declare const isComponentFunctionPath: (path: recast.types.NodePath) => boolean;
+export declare const findEnclosingFunctionPath: (path: recast.types.NodePath) => recast.types.NodePath | null;
+export declare const ensureRemotionImports: (ast: File, names: ReadonlySet<string>) => void;
+export declare const ensureUseCurrentFrameHook: ({ referencePath, hookName, }: {
+    referencePath: recast.types.NodePath;
+    hookName: string;
+}) => string;

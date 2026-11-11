@@ -1,0 +1,35 @@
+import type { Compiler } from 'webpack';
+type TraceLogFn = (...args: Parameters<typeof console.log>) => void;
+export declare class WatchIgnoreNextChangePlugin {
+    private filesToIgnore;
+    private filesRequiringRebuild;
+    private dirsToIgnore;
+    private snapshotFileTimestamps;
+    private snapshotDirTimestamps;
+    private snapshotDirectoryContents;
+    private suppressedFilesHistory;
+    private currentWatcher;
+    private pendingFileChanges;
+    private notifiedFiles;
+    private notifiedDirectories;
+    private notifiedDirectoryContents;
+    private notifyFileChanges;
+    private pendingFlush;
+    private notifying;
+    private trace;
+    constructor(trace: TraceLogFn);
+    ignoreNextChange(file: string, contents: string | null): void;
+    private releaseChangedSuppressions;
+    private isIgnoredDirectory;
+    requireRebuild(file: string): void;
+    notifyFileChanged(file: string, contents: string | null): void;
+    private scheduleNotification;
+    private isAlreadyNotified;
+    private isAlreadyNotifiedDirectory;
+    private consumeNotifiedSuppression;
+    unignoreNextChange(file: string): void;
+    consumeSuppressedFilesHistory(): string[];
+    consumeSuppressedFilesForRebuild(onlyFile?: string | null): string[];
+    apply(compiler: Compiler): void;
+}
+export {};
