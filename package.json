@@ -10,10 +10,10 @@
     "test": "bun test"
   },
   "dependencies": {
-    "@remotion/cli": "^4.0.542",
+    "@remotion/cli": "4.0.542",
     "jszip": "^3.10.1",
-    "remotion": "^4.0.542",
-    "zod": "^3.23.0"
+    "remotion": "4.0.542",
+    "zod": "4.6.7"
   },
   "devDependencies": {
     "@types/bun": "^1.2.0",

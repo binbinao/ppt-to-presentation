@@ -5,10 +5,10 @@
     "": {
       "name": "ppt-to-presentation",
       "dependencies": {
-        "@remotion/cli": "^4.0.542",
+        "@remotion/cli": "4.0.542",
         "jszip": "^3.10.1",
-        "remotion": "^4.0.542",
-        "zod": "^3.23.0",
+        "remotion": "4.0.542",
+        "zod": "4.6.7",
       },
       "devDependencies": {
         "@types/bun": "^1.2.0",
@@ -596,7 +596,7 @@
 
     "yallist": ["yallist@4.0.0", "https://registry.npmmirror.com/yallist/-/yallist-4.0.0.tgz", {}, "sha512-3wdGidZyq5PB084XLES5TpOSRA3wjXAlIWMhum2kRcv/41Sn2emQ0dycQW4uZXLejwKvg6EsvbdlVL+FYEct7A=="],
 
-    "zod": ["zod@3.25.76", "https://registry.npmmirror.com/zod/-/zod-3.25.76.tgz", {}, "sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ=="],
+    "zod": ["zod@4.6.7", "https://registry.npmmirror.com/zod/-/zod-4.6.7.tgz", {}, "sha512-g8W2D2kU6a8untc053fX1uVBKzM7yqAxW/3zwk83+6RyF2+SKOuV+c0wBDhUwzV1PaGapmZH+rmcUzPf+3CGwg=="],
 
     "@babel/core/@babel/parser": ["@babel/parser@7.29.13", "https://registry.npmmirror.com/@babel/parser/-/parser-7.29.13.tgz", { "dependencies": { "@babel/types": "^7.29.11" }, "bin": "./bin/babel-parser.js" }, "sha512-fJM50YYjlTiBhgdkGmC1tBpv+FMAyo4annf2X6Aks+0yRlaiVkYW/3f07xAfVVkYIoZ9fFZp+mEThUFnuybhkQ=="],
 
@@ -623,18 +623,6 @@
     "@babel/traverse/@babel/parser": ["@babel/parser@7.29.13", "https://registry.npmmirror.com/@babel/parser/-/parser-7.29.13.tgz", { "dependencies": { "@babel/types": "^7.29.11" }, "bin": "./bin/babel-parser.js" }, "sha512-fJM50YYjlTiBhgdkGmC1tBpv+FMAyo4annf2X6Aks+0yRlaiVkYW/3f07xAfVVkYIoZ9fFZp+mEThUFnuybhkQ=="],
 
     "@babel/traverse/@babel/types": ["@babel/types@7.29.11", "https://registry.npmmirror.com/@babel/types/-/types-7.29.11.tgz", { "dependencies": { "@babel/helper-string-parser": "^7.29.11", "@babel/helper-validator-identifier": "^7.29.7" } }, "sha512-WCsemW40Cpc6gouC1SrY6PBaZ+oLRlEVY9XBvZBI7il/HyUrb2nJ505wE1MHEFyDZNnrWDEuy4jL50WVHfTTSQ=="],
-
-    "@remotion/elevenlabs/zod": ["zod@4.6.7", "https://registry.npmmirror.com/zod/-/zod-4.6.7.tgz", {}, "sha512-g8W2D2kU6a8untc053fX1uVBKzM7yqAxW/3zwk83+6RyF2+SKOuV+c0wBDhUwzV1PaGapmZH+rmcUzPf+3CGwg=="],
-
-    "@remotion/media/zod": ["zod@4.6.7", "https://registry.npmmirror.com/zod/-/zod-4.6.7.tgz", {}, "sha512-g8W2D2kU6a8untc053fX1uVBKzM7yqAxW/3zwk83+6RyF2+SKOuV+c0wBDhUwzV1PaGapmZH+rmcUzPf+3CGwg=="],
-
-    "@remotion/openai-whisper/zod": ["zod@4.6.7", "https://registry.npmmirror.com/zod/-/zod-4.6.7.tgz", {}, "sha512-g8W2D2kU6a8untc053fX1uVBKzM7yqAxW/3zwk83+6RyF2+SKOuV+c0wBDhUwzV1PaGapmZH+rmcUzPf+3CGwg=="],
-
-    "@remotion/studio/zod": ["zod@4.6.7", "https://registry.npmmirror.com/zod/-/zod-4.6.7.tgz", {}, "sha512-g8W2D2kU6a8untc053fX1uVBKzM7yqAxW/3zwk83+6RyF2+SKOuV+c0wBDhUwzV1PaGapmZH+rmcUzPf+3CGwg=="],
-
-    "@remotion/studio-protocol/zod": ["zod@4.6.7", "https://registry.npmmirror.com/zod/-/zod-4.6.7.tgz", {}, "sha512-g8W2D2kU6a8untc053fX1uVBKzM7yqAxW/3zwk83+6RyF2+SKOuV+c0wBDhUwzV1PaGapmZH+rmcUzPf+3CGwg=="],
-
-    "@remotion/studio-server/zod": ["zod@4.6.7", "https://registry.npmmirror.com/zod/-/zod-4.6.7.tgz", {}, "sha512-g8W2D2kU6a8untc053fX1uVBKzM7yqAxW/3zwk83+6RyF2+SKOuV+c0wBDhUwzV1PaGapmZH+rmcUzPf+3CGwg=="],
 
     "@svgr/hast-util-to-babel-ast/@babel/types": ["@babel/types@7.29.11", "https://registry.npmmirror.com/@babel/types/-/types-7.29.11.tgz", { "dependencies": { "@babel/helper-string-parser": "^7.29.11", "@babel/helper-validator-identifier": "^7.29.7" } }, "sha512-WCsemW40Cpc6gouC1SrY6PBaZ+oLRlEVY9XBvZBI7il/HyUrb2nJ505wE1MHEFyDZNnrWDEuy4jL50WVHfTTSQ=="],
 

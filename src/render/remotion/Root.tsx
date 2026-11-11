@@ -1,6 +1,6 @@
 import React from "react";
 import { z } from "zod";
-import { Composition } from "remotion";
+import { Composition, getInputProps } from "remotion";
 import { SlideComposition, FPS, type SlideProps } from "./SlideComposition";
 import type { Outline, Script } from "../../schema";
 
@@ -11,14 +11,19 @@ export const slidePropsSchema = z.object({
   durationSec: z.number(),
 });
 
-export interface RemotionProps {
+// Type alias satisfies Remotion's Record<string, unknown> constraint.
+export type RemotionProps = {
   outline: Outline;
   script: Script;
   audio: string[];
-}
+};
 
 // One composition per segment; rendered individually then ffmpeg-concatenated.
-export const RemotionRoot: React.FC<RemotionProps> = ({ outline, script, audio }) => {
+// Input props arrive via Remotion --props; read with getInputProps() at render time.
+export const RemotionRoot: React.FC = () => {
+  const input = getInputProps<RemotionProps>();
+  const { outline, script, audio } = input;
+  if (!outline || !script) throw new Error("render: missing input props (outline/script) — pass --props to remotion render");
   return (
     <>
       {script.segments.map((seg, i) => {

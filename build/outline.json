@@ -1,1 +1,26 @@
-{"deck":{"title":"D","slideCount":2},"slides":[{"slide":1,"title":"T1","body":[],"notes":"","image":"s1.png"},{"slide":2,"title":"T2","body":[],"notes":"","image":"s2.png"}]}
+{
+  "deck": {
+    "title": "sample",
+    "slideCount": 2
+  },
+  "slides": [
+    {
+      "slide": 1,
+      "title": "Project Overview",
+      "body": [
+        "Convert PPT to video"
+      ],
+      "notes": "Greet the audience.",
+      "image": "build/slides/slide-1.png"
+    },
+    {
+      "slide": 2,
+      "title": "Pipeline",
+      "body": [
+        "parse draft review render"
+      ],
+      "notes": "Walk through the four steps.",
+      "image": "build/slides/slide-2.png"
+    }
+  ]
+}

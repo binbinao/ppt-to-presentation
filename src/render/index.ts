@@ -21,7 +21,7 @@ async function main() {
   for (const seg of script.segments) {
     const id = `slide-${seg.slide}`;
     const out = `output/segment-${seg.slide}.mp4`;
-    await $`bunx remotion render src/render/remotion/Root.tsx ${id} ${out} --props=${remotionProps}`.quiet();
+    await $`bunx remotion render src/render/remotion/index.ts ${id} ${out} --props=${remotionProps}`.quiet();
     segmentVideos.push(out);
   }
 
