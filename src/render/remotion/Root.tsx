@@ -1,17 +1,16 @@
 import React from "react";
 import { z } from "zod";
 import { Composition, getInputProps } from "remotion";
-import { SlideComposition, FPS, type SlideProps } from "./SlideComposition";
-import type { Outline, Script } from "../../schema";
+import { SlideComposition, FPS } from "./SlideComposition";
+import { validateOutline, validateScript, type Outline, type Script } from "../../schema";
 
 export const slidePropsSchema = z.object({
-  title: z.string(),
-  image: z.string(),
-  audio: z.string(),
-  durationSec: z.number(),
+  segmentIndex: z.number().int().nonnegative(),
 });
 
-// Type alias satisfies Remotion's Record<string, unknown> constraint.
+export type SegmentIndexProps = z.infer<typeof slidePropsSchema>;
+
+// Input props injected via --props (see render CLI); read with getInputProps().
 export type RemotionProps = {
   outline: Outline;
   script: Script;
@@ -19,11 +18,19 @@ export type RemotionProps = {
 };
 
 // One composition per segment; rendered individually then ffmpeg-concatenated.
-// Input props arrive via Remotion --props; read with getInputProps() at render time.
+// Per-slide props are NOT passed through defaultProps because Remotion merges
+// inputProps over composition defaultProps (same-named keys would be clobbered).
+// Instead each composition receives only its segmentIndex and resolves its own
+// data from getInputProps() inside SlideComposition.
 export const RemotionRoot: React.FC = () => {
   const input = getInputProps<RemotionProps>();
-  const { outline, script, audio } = input;
-  if (!outline || !script) throw new Error("render: missing input props (outline/script) — pass --props to remotion render");
+  const { outline, script } = input;
+  if (!outline || !script) {
+    throw new Error("render: missing input props (outline/script) — pass --props to remotion render");
+  }
+  validateOutline(outline);
+  validateScript(script);
+
   return (
     <>
       {script.segments.map((seg, i) => {
@@ -36,7 +43,7 @@ export const RemotionRoot: React.FC = () => {
             id={`slide-${seg.slide}`}
             schema={slidePropsSchema}
             component={SlideComposition}
-            defaultProps={{ title: slide.title, image: slide.image, audio: audio[i] ?? "", durationSec }}
+            defaultProps={{ segmentIndex: i }}
             durationInFrames={Math.ceil(durationSec * FPS)}
             fps={FPS}
             width={1920}
