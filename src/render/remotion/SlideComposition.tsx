@@ -1,12 +1,13 @@
 import React from "react";
 import { AbsoluteFill, Audio, Img, staticFile } from "remotion";
 
-export interface SlideProps {
+// Type alias (not interface) so it satisfies Record<string, unknown> constraints.
+export type SlideProps = {
   title: string;
   image: string; // path under build/, resolved via staticFile
   audio: string; // path under build/audio
   durationSec: number;
-}
+};
 
 // 30 fps; composition duration derived from narration audio length.
 export const FPS = 30;
