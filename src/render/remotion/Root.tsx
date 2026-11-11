@@ -26,7 +26,7 @@ export const RemotionRoot: React.FC<RemotionProps> = ({ outline, script, audio }
         if (!slide) throw new Error(`render: slide ${seg.slide} missing from outline`);
         const durationSec = seg.durationSec ?? 3;
         return (
-          <Composition<SlideProps, typeof slidePropsSchema>
+          <Composition<typeof slidePropsSchema._output, typeof slidePropsSchema>
             key={seg.slide}
             id={`slide-${seg.slide}`}
             schema={slidePropsSchema}
