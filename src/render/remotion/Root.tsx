@@ -1,6 +1,6 @@
 import React from "react";
 import { Composition } from "remotion";
-import { SlideComposition, FPS } from "./SlideComposition";
+import { SlideComposition, FPS, type SlideProps } from "./SlideComposition";
 import type { Outline, Script } from "../../schema";
 
 export interface RemotionProps {
@@ -18,7 +18,7 @@ export const RemotionRoot: React.FC<RemotionProps> = ({ outline, script, audio }
         if (!slide) throw new Error(`render: slide ${seg.slide} missing from outline`);
         const durationSec = seg.durationSec ?? 3;
         return (
-          <Composition
+          <Composition<SlideProps, SlideProps>
             key={seg.slide}
             id={`slide-${seg.slide}`}
             component={SlideComposition}

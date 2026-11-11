@@ -13,10 +13,11 @@ export async function renderSlideImages(deckPath: string, outDir: string): Promi
 
   // pdftoppm pads page numbers (slide-01.png); normalize to slide-N.png.
   const glob = new Bun.Glob("slide-*.png");
-  const padded = [...(await glob.scan({ cwd: outDir }))]
-    .sort()
-    .map((p) => `${outDir}/${p}`)
-    .filter((p) => /^slide-\d+\.png$/.test(p));
+  const padded: string[] = [];
+  for await (const p of glob.scan({ cwd: outDir })) {
+    if (/^slide-\d+\.png$/.test(p)) padded.push(`${outDir}/${p}`);
+  }
+  padded.sort();
   if (padded.length === 0) throw new Error(`slide image rendering produced no output in ${outDir}`);
 
   const normalized: string[] = [];

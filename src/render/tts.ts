@@ -20,7 +20,7 @@ export function computeSegmentPlan(script: Script, durationsSec: number[]): Scri
 
 export async function probeDurationSec(path: string): Promise<number> {
   const res = await $`ffprobe -v error -show_entries format=duration -of csv=p=0 ${path}`.quiet();
-  const d = Number.parseFloat(res.text.trim());
+  const d = Number.parseFloat(res.text.toString().trim());
   if (!Number.isFinite(d) || d <= 0) throw new Error(`ffprobe could not read duration for ${path}`);
   return d;
 }
