@@ -104,9 +104,6 @@ bunx remotion studio src/render/remotion/Root.tsx   # 可视化预览
 ## 验证状态
 
 - 单测：bun test 15/15 通过（schema 4、parse 4、align 4、tts 3）。
-- 端到端冒烟（bun 正常期）：
-  - parse 全链路 ✅：`fixtures/sample.pptx` → outline.json 结构正确 + 2 张页图（soffice/pdftoppm）
-  - draft/review 门 ✅：合法稿通过（exit 0）、坏稿输出编号问题清单（exit 1）
-  - TTS ✅：edge-tts 生成 22.8s 有效 mp3；ffprobe 时长探测 + durationSec 回填已修（Bun stdout Buffer 兼容）
-- Remotion 渲染：代码链路完成（rspack bundle 2s OK、openBrowser OK、`getInputProps` 注入）；端到端视频输出受阻于本机环境（Chromium 157/158 renderer 与 Remotion 4.0.542 兼容性 + bun 运行时被系统层阻塞，见 README"已知环境注意事项"）。在标准环境（Chrome for Testing 正常）下应可跑通。
-- 核心模块 Node 原生 TS 冒烟：schema/parse/alignment 3/4 通过（tts 模块依赖 Bun.$ 属预期绑定）。
+- **端到端全链路 ✅**（正常环境下实测）：`fixtures/sample.pptx` → parse（页图含内容）→ draft/review 门 → render → `output/video.mp4`（2.1MB，48.7s，1920×1080 h264+aac）。抽帧验证：两页 PPT 内容 + 字幕条正确渲染，音轨全程覆盖。
+- 渲染链路最终修（见 git log c433ae4）：composition 只收 `segmentIndex`（Remotion 会把 inputProps 与 defaultProps 同名合并，避免键冲突）、渲染前同步素材到 `public/`（staticFile 基准目录）、ffmpeg concat 加 `-y`（quiet 模式下交互询问会静默失败）。
+- 本机环境特有约定（见 README"已知环境注意事项"）：`--rspack` 必开、无 remotion.config.ts、`--browser-executable` 指向系统 Chrome。

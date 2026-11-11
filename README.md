@@ -29,12 +29,13 @@ bun run render build/script.json
 
 ## 已知环境注意事项
 
-- **Remotion 必须用 rspack bundler**（`--rspack` flag / `bundle({ rspack: true })`）：本机 webpack 编译会挂起（progress 卡 ~6%），rspack 2 秒完成。Node ≥20.19 即可满足 rspack 要求。
-- **不要创建 `remotion.config.ts`**：Remotion CLI 启动时经 esbuild JS API 加载它，本机 esbuild 服务进程会挂起（已删除，改用 `--image-format=jpeg --overwrite` CLI flag）。
-- Remotion props 经 `--props` 注入，root 组件用 `getInputProps()` 读取（见 `src/render/remotion/Root.tsx`）。
+- **Remotion 必须用 rspack bundler**（CLI 已内置 `--rspack`）：本机 webpack 编译会挂起（progress 卡 ~6%），rspack 2 秒完成。Node ≥20.19 即可满足 rspack 要求。
+- **不要创建 `remotion.config.ts`**：Remotion CLI 启动时经 esbuild JS API 加载它，本机 esbuild 服务进程会挂起（已删除，改用 CLI flag）。
+- 渲染前自动把 `build/slides`、`build/audio` 同步到 `public/`（Remotion staticFile 的基准目录）。
+- composition 只接收 `segmentIndex`，数据经 `getInputProps()` 解析——Remotion 会把 inputProps 与 defaultProps 同名合并，直接传 `audio` 字符串会被整个数组覆盖。
+- ffmpeg concat 已加 `-y`（quiet 模式下覆盖询问会静默失败）。
 - 渲染入口是 `src/render/remotion/index.ts`（调用 `registerRoot`），不是 `Root.tsx`。
 - Bun `.quiet()` 的 stdout 在部分版本返回 Buffer 而非 string，`tts.ts` 已做双形态兼容。
-- 本会话后期观察到机器上 bun 执行 JS 挂起（openat 阻塞，疑安全软件 hook）；Node 执行正常。核心模块可用 Node ≥23（原生 TS）直接冒烟：见 `docs/superpowers/plans/` 下验证记录。
 
 ## 测试
 
