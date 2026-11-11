@@ -103,5 +103,10 @@ bunx remotion studio src/render/remotion/Root.tsx   # 可视化预览
 
 ## 验证状态
 
-- 单测：15/15 通过（bun test）。
-- 端到端冒烟：pending 外部 CLI 安装完成后执行（parse→draft→review→render 全链路）。
+- 单测：bun test 15/15 通过（schema 4、parse 4、align 4、tts 3）。
+- 端到端冒烟（bun 正常期）：
+  - parse 全链路 ✅：`fixtures/sample.pptx` → outline.json 结构正确 + 2 张页图（soffice/pdftoppm）
+  - draft/review 门 ✅：合法稿通过（exit 0）、坏稿输出编号问题清单（exit 1）
+  - TTS ✅：edge-tts 生成 22.8s 有效 mp3；ffprobe 时长探测 + durationSec 回填已修（Bun stdout Buffer 兼容）
+- Remotion 渲染：代码链路完成（rspack bundle 2s OK、openBrowser OK、`getInputProps` 注入）；端到端视频输出受阻于本机环境（Chromium 157/158 renderer 与 Remotion 4.0.542 兼容性 + bun 运行时被系统层阻塞，见 README"已知环境注意事项"）。在标准环境（Chrome for Testing 正常）下应可跑通。
+- 核心模块 Node 原生 TS 冒烟：schema/parse/alignment 3/4 通过（tts 模块依赖 Bun.$ 属预期绑定）。
