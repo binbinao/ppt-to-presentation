@@ -1,4 +1,4 @@
-import { mkdir } from "node:fs/promises";
+import { mkdir, rename, rm } from "node:fs/promises";
 import { $ } from "bun";
 
 // Render each slide to PNG via LibreOffice → PDF → pdftoppm.
@@ -11,20 +11,34 @@ export async function renderSlideImages(deckPath: string, outDir: string): Promi
   await $`mv ${outDir}/${deckName}.pdf ${outDir}/deck.pdf`.quiet();
   await $`pdftoppm -png -r 150 ${outDir}/deck.pdf ${outDir}/slide`.quiet();
 
-  // pdftoppm pads page numbers (slide-01.png); normalize to slide-N.png.
+  // pdftoppm may pad page numbers (slide-01.png) or not (slide-1.png).
+  // Collect raw outputs, then move them into a temp dir FIRST so that renaming
+  // slide-*.png -> slide-N.png cannot overwrite sources still waiting in the
+  // same directory (a >9-page deck would otherwise clobber slide-2..slide-9).
   const glob = new Bun.Glob("slide-*.png");
-  const padded: string[] = [];
+  const raw: string[] = [];
   for await (const p of glob.scan({ cwd: outDir })) {
-    if (/^slide-\d+\.png$/.test(p)) padded.push(`${outDir}/${p}`);
+    if (/^slide-\d+\.png$/.test(p)) raw.push(p);
   }
-  padded.sort();
-  if (padded.length === 0) throw new Error(`slide image rendering produced no output in ${outDir}`);
+  if (raw.length === 0) throw new Error(`slide image rendering produced no output in ${outDir}`);
+  // Natural numeric sort by the page number embedded in the filename.
+  raw.sort((a, b) => {
+    const na = Number(a.match(/slide-(\d+)\.png/)![1]);
+    const nb = Number(b.match(/slide-(\d+)\.png/)![1]);
+    return na - nb;
+  });
+
+  const tmpDir = `${outDir}/.raw`;
+  await rm(tmpDir, { recursive: true, force: true });
+  await mkdir(tmpDir, { recursive: true });
+  for (const p of raw) await rename(`${outDir}/${p}`, `${tmpDir}/${p}`);
 
   const normalized: string[] = [];
-  for (let i = 0; i < padded.length; i++) {
+  for (let i = 0; i < raw.length; i++) {
     const target = `${outDir}/slide-${i + 1}.png`;
-    await $`mv ${padded[i]} ${target}`.quiet();
+    await rename(`${tmpDir}/${raw[i]}`, target);
     normalized.push(target);
   }
+  await rm(tmpDir, { recursive: true, force: true });
   return normalized;
 }

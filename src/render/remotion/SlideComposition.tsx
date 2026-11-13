@@ -1,5 +1,6 @@
 import React from "react";
 import { AbsoluteFill, Audio, Img, getInputProps, staticFile } from "remotion";
+import { subtitleFromNarration } from "../subtitle";
 
 // Type alias (not interface) so it satisfies Record<string, unknown> constraints.
 export type SlideProps = {
@@ -19,8 +20,8 @@ export const audioAssetPath = (audioRel: string): string => audioRel.replace(/^b
 // subtitle bar. Resolves its own data from input props (see Root.tsx for why).
 export const SlideComposition: React.FC<SlideProps> = ({ segmentIndex }) => {
   const input = getInputProps<{
-    outline: { slides: Array<{ slide: number; title: string; image: string }> };
-    script: { segments: Array<{ slide: number; durationSec?: number }> };
+    outline: { slides: Array<{ slide: number; title: string; body: string[]; image: string }> };
+    script: { segments: Array<{ slide: number; narration: string; durationSec?: number }> };
     audio: string[];
   }>();
 
@@ -35,6 +36,10 @@ export const SlideComposition: React.FC<SlideProps> = ({ segmentIndex }) => {
   if (!slide) throw new Error(`SlideComposition: slide ${seg.slide} missing from outline`);
   if (typeof slide.image !== "string") throw new Error(`SlideComposition: slide ${seg.slide} image missing`);
   const durationSec = seg.durationSec ?? 3;
+
+  // Subtitle: not slide.title (corporate template repeats "腾讯集团" on every
+  // page) but a short summary derived from this page's narration opening.
+  const headline = subtitleFromNarration(seg.narration ?? "");
 
   return (
     <AbsoluteFill>
@@ -51,9 +56,10 @@ export const SlideComposition: React.FC<SlideProps> = ({ segmentIndex }) => {
           padding: "12px 20px",
           borderRadius: 8,
           fontSize: 28,
+          lineHeight: 1.3,
         }}
       >
-        {slide.title}
+        {headline}
       </div>
     </AbsoluteFill>
   );
