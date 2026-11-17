@@ -3,6 +3,7 @@ import { z } from "zod";
 const DeckInfo = z.object({
   title: z.string().min(1),
   slideCount: z.number().int().positive(),
+  fingerprint: z.string().optional(), // short sha256 of the source pptx (written by parse)
 });
 
 export const OutlineSchema = z

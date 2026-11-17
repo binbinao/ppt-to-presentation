@@ -1,6 +1,8 @@
 import { validateScript, validateOutline } from "../schema";
 import { checkAlignment } from "../draft/align";
 import { analyzeScript, type NarrationReport, LONG_CLAUSE_THRESHOLD } from "./narration";
+import { durationBand } from "./band";
+import { checkDeckFingerprint } from "../parse/fingerprint";
 import { resolveVoice } from "../render/tts";
 import { mkdir } from "node:fs/promises";
 
@@ -103,10 +105,23 @@ async function main() {
   for (const seg of script.segments) {
     if (seg.narration.trim().length === 0) problems.push(`slide ${seg.slide}: narration is empty`);
   }
+  // Deck fingerprint: the source pptx must not have changed since parse/draft.
+  const fingerprintFile = Bun.file("build/deck-fingerprint.txt");
+  if (await fingerprintFile.exists()) {
+    problems.push(...checkDeckFingerprint(outline.deck.fingerprint, (await fingerprintFile.text()).trim()));
+  }
   if (problems.length > 0) {
     console.error(`REVIEW FAILED — ${problems.length} problem(s):`);
     problems.forEach((p, i) => console.error(`${i + 1}. ${p}`));
     process.exit(1);
+  }
+
+  // Duration band — advisory warnings (information-dense slides may exceed).
+  for (const seg of script.segments) {
+    if (seg.durationSec !== undefined) {
+      const band = durationBand(seg.durationSec);
+      if (band) console.warn(`[band] slide ${seg.slide}: durationSec ${seg.durationSec.toFixed(1)}s — ${band}`);
+    }
   }
 
   // QA REPORT — advisory, always written so the agent can act on it

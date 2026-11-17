@@ -8,6 +8,7 @@
     "review": "bun run src/review/index.ts",
     "render": "bun run src/render/index.ts",
     "qa": "bun run src/qa/index.ts",
+    "doctor": "bun run src/doctor.ts",
     "test": "bun test"
   },
   "dependencies": {

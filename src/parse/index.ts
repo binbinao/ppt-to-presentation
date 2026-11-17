@@ -2,6 +2,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { extractSlides } from "./pptx";
 import { renderSlideImages } from "./slides";
 import { validateOutline } from "../schema";
+import { deckFingerprint } from "./fingerprint";
 
 async function main() {
   const deckPath = process.argv[2];
@@ -18,12 +19,17 @@ async function main() {
   }
 
   const outline = validateOutline({
-    deck: { title: deckPath.replace(/.*\//, "").replace(/\.pptx$/, ""), slideCount: rawSlides.length },
+    deck: {
+      title: deckPath.replace(/.*\//, "").replace(/\.pptx$/, ""),
+      slideCount: rawSlides.length,
+      fingerprint: deckFingerprint(pptxBytes),
+    },
     slides: rawSlides.map((s, i) => ({ ...s, image: imagePaths[i]! })),
   });
 
   await mkdir("build", { recursive: true });
   await writeFile("build/outline.json", JSON.stringify(outline, null, 2));
+  await writeFile("build/deck-fingerprint.txt", outline.deck.fingerprint!);
   console.log(`build/outline.json: ${rawSlides.length} slides, ${imagePaths.length} images`);
 }
 
