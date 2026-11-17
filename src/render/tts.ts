@@ -8,6 +8,11 @@ import { sampleDeckPalette } from "./palette";
 // Voice is resolved per run from deck palette + env override (see voice.ts).
 export const VOICE = "zh-CN-YunyangNeural";
 
+// Standard per-slide audio file name (basename); shared with segments.ts.
+function SEGMENT_FILE_NAME(path: string): string {
+  return path.replace(/.*\//, "");
+}
+
 export async function resolveVoice(deckTitle: string, sampleText?: string): Promise<{ voice: string; reason: string; palette?: DeckPalette }> {
   let palette: DeckPalette | undefined;
   try {
@@ -37,6 +42,33 @@ export async function probeDurationSec(path: string): Promise<number> {
   const d = Number.parseFloat(out.toString().trim());
   if (!Number.isFinite(d) || d <= 0) throw new Error(`ffprobe could not read duration for ${path}`);
   return d;
+}
+
+// Measured speech rate for zh-CN neural voices: ~4.5 chars/sec (62 chars → 13.5s).
+const CHARS_PER_SECOND = 4.5;
+// Below this char count the rate estimate is too noisy to sanity-check.
+const MIN_CHARS_FOR_CHECK = 20;
+
+// Resume gate: an existing mp3 is reusable only if it exists, is non-empty,
+// and ffprobe can read a positive duration. edge-tts WSS drops leave 0-byte
+// files that MUST be re-synthesized.
+export function isReusableAudio(f: { exists: boolean; sizeBytes: number; durationSec: number }): boolean {
+  return f.exists && f.sizeBytes > 0 && f.durationSec > 0;
+}
+
+// Post-synthesis completeness heuristic: a badly truncated stream still yields
+// a "valid" ffprobe duration, so cross-check against the narration length.
+// Returns a warning string, or null when plausible.
+export function sanityCheckDuration(f: { narrationChars: number; durationSec: number }): string | null {
+  if (f.narrationChars < MIN_CHARS_FOR_CHECK) return null;
+  const expected = f.narrationChars / CHARS_PER_SECOND;
+  if (f.durationSec < expected * 0.6) {
+    return `audio ${f.durationSec.toFixed(1)}s is much shorter than expected ~${expected.toFixed(1)}s for ${f.narrationChars} chars — likely truncated; re-run render to re-synthesize`;
+  }
+  if (f.durationSec > expected * 2) {
+    return `audio ${f.durationSec.toFixed(1)}s is much longer than expected ~${expected.toFixed(1)}s for ${f.narrationChars} chars — check narration content`;
+  }
+  return null;
 }
 
 // Synthesize narration audio per segment via edge-tts CLI, probing durations
@@ -72,7 +104,28 @@ export async function synthesizeAll(scriptPath: string, audioDir: string): Promi
   const durations: number[] = [];
   for (const seg of script.segments) {
     const out = `${audioDir}/segment-${seg.slide}.mp3`;
+
+    // Idempotent resume: skip synthesis when a previous run already produced a
+    // playable file for the same narration position. Re-synthesized on --force
+    // (delete build/audio) since narration content isn't hashed here.
+    let reusable = false;
+    const f = Bun.file(out);
+    if (await f.exists()) {
+      try {
+        const d = await probeDurationSec(out);
+        reusable = isReusableAudio({ exists: true, sizeBytes: f.size, durationSec: d });
+        if (reusable) {
+          audio.push(out);
+          durations.push(d);
+          console.log(`[tts] slide ${seg.slide}: reusing existing ${SEGMENT_FILE_NAME(out)} (${d.toFixed(1)}s)`);
+          continue;
+        }
+      } catch { /* unplayable — fall through to re-synthesis */ }
+    }
+
     const d = await synthesizeSegment(voice, seg.narration, out);
+    const warning = sanityCheckDuration({ narrationChars: Array.from(seg.narration).length, durationSec: d });
+    if (warning) console.warn(`[tts] slide ${seg.slide}: ${warning}`);
     audio.push(out);
     durations.push(d);
   }
