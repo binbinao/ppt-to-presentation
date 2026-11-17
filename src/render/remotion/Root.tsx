@@ -5,23 +5,25 @@ import { SlideComposition, FPS } from "./SlideComposition";
 import { validateOutline, validateScript, type Outline, type Script } from "../../schema";
 
 export const slidePropsSchema = z.object({
-  segmentIndex: z.number().int().nonnegative(),
+  slide: z.number().int().positive(),
 });
 
-export type SegmentIndexProps = z.infer<typeof slidePropsSchema>;
+export type SlideIndexProps = z.infer<typeof slidePropsSchema>;
 
 // Input props injected via --props (see render CLI); read with getInputProps().
 export type RemotionProps = {
   outline: Outline;
   script: Script;
-  audio: string[];
+  audio: Record<number, string>; // slide number -> audio path (field-driven, never array index)
 };
 
 // One composition per segment; rendered individually then ffmpeg-concatenated.
-// Per-slide props are NOT passed through defaultProps because Remotion merges
-// inputProps over composition defaultProps (same-named keys would be clobbered).
-// Instead each composition receives only its segmentIndex and resolves its own
-// data from getInputProps() inside SlideComposition.
+// Composition receives only its slide number and resolves everything from
+// inputProps — Remotion merges inputProps over defaultProps, so same-named
+// keys in defaultProps would be clobbered (see SlideComposition).
+// durationSec is required: the render CLI backfills it before invoking
+// Remotion; a missing value means script.json was hand-edited and must fail
+// loudly instead of silently truncating audio to 3s.
 export const RemotionRoot: React.FC = () => {
   const input = getInputProps<RemotionProps>();
   const { outline, script } = input;
@@ -30,20 +32,25 @@ export const RemotionRoot: React.FC = () => {
   }
   validateOutline(outline);
   validateScript(script);
+  for (const seg of script.segments) {
+    if (seg.durationSec === undefined) {
+      throw new Error(`render: slide ${seg.slide} missing durationSec — script.json must be backfilled by the render pipeline, not hand-edited`);
+    }
+  }
 
   return (
     <>
-      {script.segments.map((seg, i) => {
+      {script.segments.map((seg) => {
         const slide = outline.slides.find((s) => s.slide === seg.slide);
         if (!slide) throw new Error(`render: slide ${seg.slide} missing from outline`);
-        const durationSec = seg.durationSec ?? 3;
+        const durationSec = seg.durationSec!;
         return (
           <Composition
             key={seg.slide}
             id={`slide-${seg.slide}`}
             schema={slidePropsSchema}
             component={SlideComposition}
-            defaultProps={{ segmentIndex: i }}
+            defaultProps={{ slide: seg.slide }}
             durationInFrames={Math.ceil(durationSec * FPS)}
             fps={FPS}
             width={1920}

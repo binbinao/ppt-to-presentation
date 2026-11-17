@@ -4,7 +4,7 @@ import { subtitleFromNarration } from "../subtitle";
 
 // Type alias (not interface) so it satisfies Record<string, unknown> constraints.
 export type SlideProps = {
-  segmentIndex: number;
+  slide: number;
 };
 
 // 30 fps; composition duration derived from narration audio length.
@@ -17,29 +17,30 @@ export const slideAssetPath = (imageRel: string): string => imageRel.replace(/^b
 export const audioAssetPath = (audioRel: string): string => audioRel.replace(/^build\//, "");
 
 // One slide per segment: static high-fidelity page image + narration audio +
-// subtitle bar. Resolves its own data from input props (see Root.tsx for why).
-export const SlideComposition: React.FC<SlideProps> = ({ segmentIndex }) => {
+// subtitle bar. Resolves its own data from input props by SLIDE FIELD (the
+// alignment invariant) — audio is looked up via the Record<slide, path> map,
+// never by array index. Subtitle shows the narration's first clause (from
+// subtitle.ts) so each page's bar is unique even with repeated page headers.
+export const SlideComposition: React.FC<SlideProps> = ({ slide: slideNumber }) => {
   const input = getInputProps<{
-    outline: { slides: Array<{ slide: number; title: string; body: string[]; image: string }> };
+    outline: { slides: Array<{ slide: number; title: string; image: string }> };
     script: { segments: Array<{ slide: number; narration: string; durationSec?: number }> };
-    audio: string[];
+    audio: Record<number, string>;
   }>();
 
-  const seg = input.script?.segments[segmentIndex];
-  if (!seg) throw new Error(`SlideComposition: segment ${segmentIndex} missing from input props`);
-  // Align by slide field (invariant): audio files are named segment-<slide>.mp3
-  const audioPath = input.audio?.[segmentIndex];
+  const seg = input.script?.segments.find((s) => s.slide === slideNumber);
+  if (!seg) throw new Error(`SlideComposition: slide ${slideNumber} missing from input props`);
+  const audioPath = input.audio?.[slideNumber];
   if (typeof audioPath !== "string") {
-    throw new Error(`SlideComposition: audio[${segmentIndex}] missing or not a string`);
+    throw new Error(`SlideComposition: audio for slide ${slideNumber} missing from audio lookup`);
   }
-  const slide = input.outline?.slides.find((s) => s.slide === seg.slide);
-  if (!slide) throw new Error(`SlideComposition: slide ${seg.slide} missing from outline`);
-  if (typeof slide.image !== "string") throw new Error(`SlideComposition: slide ${seg.slide} image missing`);
-  const durationSec = seg.durationSec ?? 3;
+  const slide = input.outline?.slides.find((s) => s.slide === slideNumber);
+  if (!slide) throw new Error(`SlideComposition: slide ${slideNumber} missing from outline`);
+  if (typeof slide.image !== "string") throw new Error(`SlideComposition: slide ${slideNumber} image missing`);
+  const durationSec = seg.durationSec;
+  if (durationSec === undefined) throw new Error(`SlideComposition: slide ${slideNumber} durationSec missing`);
 
-  // Subtitle: not slide.title (corporate template repeats "腾讯集团" on every
-  // page) but a short summary derived from this page's narration opening.
-  const headline = subtitleFromNarration(seg.narration ?? "");
+  const subtitle = subtitleFromNarration(seg.narration);
 
   return (
     <AbsoluteFill>
@@ -55,11 +56,10 @@ export const SlideComposition: React.FC<SlideProps> = ({ segmentIndex }) => {
           color: "white",
           padding: "12px 20px",
           borderRadius: 8,
-          fontSize: 28,
-          lineHeight: 1.3,
+          fontSize: 26,
         }}
       >
-        {headline}
+        {subtitle}
       </div>
     </AbsoluteFill>
   );
