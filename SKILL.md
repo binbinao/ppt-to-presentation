@@ -1,6 +1,6 @@
 ---
 name: ppt-to-presentation
-description: 把一份 PPT (.pptx) 自动转换成带旁白的介绍视频。五步流水线：解读 PPT → 写演讲稿并逐页匹配 → 文字稿 review → 合成视频 → 成片 QA。当用户要求"把 PPT 转成视频""给演示文稿配讲解"时使用。
+description: 把 .pptx 演示文稿自动转换成带旁白的介绍视频（MP4）。当用户提供 PPT/deck 文件并要求"转成视频""配音/配讲解""做成宣讲/介绍视频""PPT 变视频""narrated video"等时使用。输入必须是 .pptx 文件；只改 PPT 内容、只要页面图/PDF/纯文字稿时不用本技能。五步流水线：解读 PPT → 写演讲稿并逐页匹配 → 文字稿 review → 合成视频 → 成片 QA。
 ---
 
 # PPT → 介绍视频
@@ -12,12 +12,14 @@ description: 把一份 PPT (.pptx) 自动转换成带旁白的介绍视频。五
 开始前确认外部 CLI 可用，缺失则提示安装后再继续：
 
 ```bash
-which soffice pdftoppm edge-tts ffmpeg bun bunx ffprobe
+which soffice pdftoppm edge-tts ffmpeg bun bunx ffprobe; node --version
 ```
 
+- `node` 需 ≥20.19（Remotion rspack 硬依赖）
 - `edge-tts` 需 ≥7.3.1（旧版被微软 Sec-MS-GEC 校验拒 403）
-- Linux 无系统 Chrome 时：`npx remotion browser ensure`，render 用 `REMOTION_BROWSER=<chrome-headless-shell 路径>` 覆盖
-- 本机适配细节见 `references/linux-setup.md`
+- 渲染前确认浏览器存在（macOS 默认 `/Applications/Google Chrome.app`；Linux 无系统 Chrome 时 `npx remotion browser ensure`，render 用 `REMOTION_BROWSER=<chrome-headless-shell 路径>` 覆盖）
+- 轻量依赖（poppler、edge-tts、ffmpeg）缺失可直接执行安装命令；LibreOffice 这类大件（~1GB）先询问用户再装
+- **TTS 连通性冒烟**（在写稿前跑，失败提前终止不浪费 LLM 工作）：`edge-tts --voice zh-CN-XiaoxiaoNeural --text ping --write-media /tmp/tts-probe.mp3`，产物 >0 字节即通
 
 依赖已装则跳过：`bun install`（若 `node_modules/zod` 残缺报 Cannot find module，删目录后 `bun install --force`）。
 
@@ -35,7 +37,7 @@ bun run parse <deck.pptx>
 
 产出 `build/outline.json`（逐页 `{slide,title,body[],notes,image}`，slide 从 1 起）+ `build/slides/slide-N.png` 页图。
 
-读取 `build/outline.json` 全文掌握每页内容与演讲者备注——这是写稿唯一素材，**不得编造页面里没有的数值或结论**。
+读取 `build/outline.json` 全文掌握每页内容与演讲者备注——这是写稿唯一素材，**不得编造页面里没有的数值或结论**。具备读图能力时，逐页对照 `build/slides/slide-N.png`（尤其图表/表格页：outline 的 body 来自 XML 文本提取，图内信息大概率不在其中）。
 
 ## 步骤 2 — draft：写演讲稿并逐页匹配
 
@@ -49,6 +51,8 @@ bun run parse <deck.pptx>
   ]
 }
 ```
+
+> `deck` 两个字段照抄 `build/outline.json` 的 `deck`（title 是文件名、slideCount 是真实页数），不要自行改写。
 
 ### 音色选择（写稿前先定）
 
@@ -70,7 +74,7 @@ TTS 音色由 `src/render/voice.ts` 按 **deck 底色采样 + 标题关键词** 
    - 符号（`/`、`+`、`→`、`&`）改成文字（「和」「加上」「到」），不朗读符号
 5. **多音字**：`行/重/长/率/差/降/只/都/干/模/调/还/为` 等异读词，优先改写成无歧义同义词（如「行业」→「产业」、「重新」→「再次」、「长程」→「长距离」需谨慎）；确实要保留的，在 review 报告里标记、成片后试听确认
 6. **内容符合性**：所有数字、结论必须能在对应页 outline 里找到依据，不臆造；术语/称谓全片统一
-7. 语言跟随 PPT 原文；每段长度与页面信息量匹配（约 20–60 秒语速）
+7. **时长锚点**：实测中文语速 ≈ 4.5 字/秒——每段 90–270 汉字（约 20–60 秒）；用户指定总时长时按页数均分再按信息量微调。单段超 300 字说明该页信息量失衡，回看 body 做取舍（精炼讲解，不逐字念 body）。语言跟随 PPT 原文；音色按上文规则自动选定，非中文 deck 且无适配音色时**先停下询问用户**（当前 TTS 音色库以中文为主）。
 
 写完先跑校验：
 
@@ -138,6 +142,13 @@ bun run qa
 - 用户会亲自打开交付物并回传具体问题（乱码、页图错位、音色不对、字幕千篇一律…）。**交付前必自检**，别把"渲染完成"当"完成"——有效交付是能被打开的成品 + 真跑过的验证结论。
 - 视频交付：`.mp4` 用 `MEDIA:` 直接发对话；随附 `build/script-qa.md` + `build/video-qa.md` 与拼图，把主观项（读音/观感/节奏）如实写进说明，**不谎称"全部通过"**（客观 PASS ≠ 主观合格，见 reference 的诚实边界）。
 - 生成类任务默认内建**文字稿 + 成片**两道显式 review，不等用户指出才补；音色/断句/多音字这类"悦听"维度要主动设计，不是默认值凑合。
+
+## 失败处理
+
+- **draft/review 非 0**：按问题清单修订重跑；同一问题连续 2 轮仍不过 → 停止盲试，向用户报告分歧点与修订思路。
+- **parse 非 0**：先分类——路径/usage 错误 → 确认文件存在；pptx 损坏或加密 → 告知用户换文件；soffice/pdftoppm 报错信息不足时手动重跑 `soffice --headless --convert-to pdf --outdir build/slides <deck>` 看完整输出。
+- **render 非 0**：edge-tts 失败多为网络抖动 → 直接重跑（幂等：已有有效音频自动跳过，仅失败段重合成）；Remotion/Chrome 报错 → 对照 README"已知环境注意事项"；仍失败 → 附完整命令输出报告用户。
+- **每步产物可独立重跑**：TTS 会跳过已有效的 `segment-N.mp3`，重跑只补失败段；改了 PPT 必须重跑 parse + draft（页图会变）。
 
 ## 关键约束
 
