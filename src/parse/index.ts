@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { extractSlides } from "./pptx";
 import { renderSlideImages } from "./slides";
-import { OutlineSchema } from "../schema";
+import { validateOutline } from "../schema";
 
 async function main() {
   const deckPath = process.argv[2];
@@ -11,9 +11,15 @@ async function main() {
   const rawSlides = await extractSlides(pptxBytes);
   const imagePaths = await renderSlideImages(deckPath, "build/slides");
 
-  const outline = OutlineSchema.parse({
+  // LibreOffice may skip hidden slides; a mismatch means page images are
+  // misaligned with text — fail here rather than drifting into render.
+  if (imagePaths.length !== rawSlides.length) {
+    throw new Error(`parse: slide count mismatch — ${rawSlides.length} slides extracted but ${imagePaths.length} images rendered (hidden slides or render failure)`);
+  }
+
+  const outline = validateOutline({
     deck: { title: deckPath.replace(/.*\//, "").replace(/\.pptx$/, ""), slideCount: rawSlides.length },
-    slides: rawSlides.map((s, i) => ({ ...s, image: imagePaths[i] ?? "" })),
+    slides: rawSlides.map((s, i) => ({ ...s, image: imagePaths[i]! })),
   });
 
   await mkdir("build", { recursive: true });

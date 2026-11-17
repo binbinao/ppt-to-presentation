@@ -5,8 +5,11 @@ import { $ } from "bun";
 // Returns PNG paths in slide order, normalized to slide-N.png (1-based).
 export async function renderSlideImages(deckPath: string, outDir: string): Promise<string[]> {
   await mkdir(outDir, { recursive: true });
-  const deckName = deckPath.replace(/.*\//, "").replace(/\.pptx$/, "");
-
+  // Shell-safe basename: strips path separators and metacharacters that could
+  // break the mv/soffice/pdftoppm argument shaping (deckPath itself is passed
+  // through Bun's $ templating which argv-escapes, but this name is joined
+  // into paths, not passed as a standalone argv).
+  const deckName = `${deckPath.replace(/.*\//, "").replace(/\.pptx$/, "").replace(/[^\w.-]/g, "_") || "deck"}`;
   await $`soffice --headless --convert-to pdf --outdir ${outDir} ${deckPath}`.quiet();
   await $`mv ${outDir}/${deckName}.pdf ${outDir}/deck.pdf`.quiet();
   await $`pdftoppm -png -r 150 ${outDir}/deck.pdf ${outDir}/slide`.quiet();

@@ -32,7 +32,7 @@ describe("sanityCheckDuration", () => {
   });
 
   test("flags suspiciously long audio (>200% of expected)", () => {
-    const warning = sanityCheckDuration({ narrationChars: 10, durationSec: 30 });
+    const warning = sanityCheckDuration({ narrationChars: 30, durationSec: 45 });
     expect(warning).toMatch(/long/i);
   });
 
