@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@remotion/cli": "4.0.542",
+    "fast-xml-parser": "^5.12.1",
     "jszip": "^3.10.1",
     "remotion": "4.0.542",
     "zod": "4.6.7"
