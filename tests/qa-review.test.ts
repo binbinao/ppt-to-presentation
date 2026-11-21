@@ -75,3 +75,68 @@ describe("subtitleFromNarration — 字幕取自旁白首句且不溢出", () =>
     expect(a).not.toBe(b);
   });
 });
+
+import { checkTransitions, transitionProblems } from "../src/review/transitions";
+
+describe("checkTransitions — 段间衔接硬门", () => {
+  test("开篇段标记为 (开篇)，不算缺口", () => {
+    const rows = checkTransitions([
+      { slide: 1, narration: "在上海，有一片森林。" },
+      { slide: 2, narration: "先说它的体量。一千九百六十五亩。" },
+    ]);
+    expect(rows[0]!.connector).toBe("(开篇)");
+    expect(rows[1]!.connector).toBe("先说");
+    expect(transitionProblems(rows).length).toBe(0);
+  });
+
+  test("清单式硬起被检出为缺口", () => {
+    const rows = checkTransitions([
+      { slide: 1, narration: "今天讲三个方向。" },
+      { slide: 2, narration: "第一，这片森林很大。" },
+      { slide: 3, narration: "第二，秋天很美。" },
+    ]);
+    const problems = transitionProblems(rows);
+    expect(problems.length).toBe(2);
+    expect(problems[0]).toContain("slide 2");
+    expect(problems[1]).toContain("slide 3");
+  });
+
+  test("承接词可出现在段首 24 字中间", () => {
+    const rows = checkTransitions([
+      { slide: 1, narration: "开场。" },
+      { slide: 2, narration: "看完秋色，还有一个今年才有的理由。" },
+    ]);
+    expect(rows[1]!.connector).toBe("还有");
+    expect(transitionProblems(rows).length).toBe(0);
+  });
+
+  test("多段全有承接词 → 0 缺口", () => {
+    const rows = checkTransitions([
+      { slide: 1, narration: "开场白。" },
+      { slide: 2, narration: "先说体量。" },
+      { slide: 3, narration: "回到开头，" },
+      { slide: 4, narration: "既然如此，" },
+      { slide: 5, narration: "所以，" },
+    ]);
+    expect(transitionProblems(rows).length).toBe(0);
+  });
+});
+
+describe("checkTransitions — 清单式硬起拦截", () => {
+  test("「另外还有…」即使含承接词也算硬起", () => {
+    const rows = checkTransitions([
+      { slide: 1, narration: "开场。" },
+      { slide: 2, narration: "另外还有菊花。菊花在秋天开放。" },
+    ]);
+    expect(rows[1].connector).toBeNull();
+    expect(transitionProblems(rows).length).toBe(1);
+  });
+
+  test("「第 N 个方向」被拦截", () => {
+    const rows = checkTransitions([
+      { slide: 1, narration: "开场。" },
+      { slide: 2, narration: "第一个方向是银杏。叶子黄了。" },
+    ]);
+    expect(transitionProblems(rows).length).toBe(1);
+  });
+});

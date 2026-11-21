@@ -4,6 +4,7 @@ import { analyzeScript, type NarrationReport, LONG_CLAUSE_THRESHOLD } from "./na
 import { durationBand } from "./band";
 import { checkDeckFingerprint } from "../parse/fingerprint";
 import { resolveVoice } from "../render/tts";
+import { checkTransitions, transitionProblems, type TransitionRow } from "./transitions";
 import { mkdir } from "node:fs/promises";
 
 // Script review (spec step 3):
@@ -27,6 +28,8 @@ export type ScriptQaReport = {
     longClauses: number;
   };
   perSlide: NarrationReport[];
+  transitions: TransitionRow[];
+  transitionGaps: number;
   llmChecklist: string[];
 };
 
@@ -35,6 +38,8 @@ export async function buildScriptQaReport(
   outline: ReturnType<typeof validateOutline>,
 ): Promise<ScriptQaReport> {
   const reports = analyzeScript(script.segments);
+  const transitions = checkTransitions(script.segments);
+  const transitionGaps = transitionProblems(transitions).length;
   const voice = await resolveVoice(script.deck.title, script.segments[0]?.narration ?? "");
   return {
     deckTitle: script.deck.title,
@@ -50,12 +55,14 @@ export async function buildScriptQaReport(
       longClauses: reports.reduce((n, r) => n + (r.longestClauseLen > LONG_CLAUSE_THRESHOLD ? 1 : 0), 0),
     },
     perSlide: reports,
+    transitions,
+    transitionGaps,
     llmChecklist: [
       "通顺性：逐段默读，无病句、无成分残缺、无中英夹杂卡壳",
       "文字悦听：数字/单位/缩写已口语化转写，无不读出声的符号，长句已断句",
       "多音字：报告列出的异读词已按上下文确认读法，或改写规避",
       "内容符合性：每段陈述都能在对应页 outline（title/body/notes）找到依据，无编造数值",
-      "一致性：术语、称谓、语气全片统一；页间过渡自然",
+      "段间衔接：每段开头承接上一页的结论或数字，结尾给下一页留钩子（问句或「但…」）；章节切换处写一句过渡；禁止「第 N 个方向」「另外」「下一项」式硬起（脚本弱校验见下节，逻辑是否接上须逐段通读）",
       "音色匹配：voice 选择符合 deck 底色/题材，必要时用 PPT2VID_VOICE 覆盖",
     ],
   };
@@ -85,6 +92,19 @@ export function renderQaMarkdown(r: ScriptQaReport): string {
   const allPoly = r.perSlide.flatMap((p) => p.polyphones.map((w) => `p${p.slide} ${w}`));
   L.push(allPoly.length ? allPoly.map((x) => `- ${x}`).join("\n") : "- 无");
   L.push("");
+  L.push("## 段间衔接检查（弱校验：只看段首有没有承接词）");
+  L.push("");
+  L.push(`- 无承接词的段：**${r.transitionGaps} / ${Math.max(r.transitions.length - 1, 1)}** ${r.transitionGaps === 0 ? "✅" : "⚠️ 疑似逐页硬起、读起来像清单，review 会拦截"}`);
+  L.push("");
+  L.push("| 页 | 段首 24 字 | 承接词 |");
+  L.push("|---:|---|---|");
+  for (const t of r.transitions) {
+    L.push(`| ${t.slide} | ${t.opening.replace(/\|/g, "\\|")} | ${t.connector ?? "**无**"} |`);
+  }
+  L.push("");
+  L.push("> 注意：这只是代词/连词的机械检查。有承接词不等于逻辑真的接上了，");
+  L.push("> 段与段的论证关系仍须 agent 逐段通读确认（起—承—转—合，且每页结尾要为下一页留钩子）。");
+  L.push("");
   L.push("## LLM 自审清单（agent 必须逐项确认后才可进入 render）");
   L.push("");
   r.llmChecklist.forEach((c, i) => L.push(`${i + 1}. ${c}`));
@@ -105,6 +125,9 @@ async function main() {
   for (const seg of script.segments) {
     if (seg.narration.trim().length === 0) problems.push(`slide ${seg.slide}: narration is empty`);
   }
+  // Transition hard gate — every non-opening segment must reach back to the
+  // previous page with an explicit connective; hard-starts block review.
+  problems.push(...transitionProblems(checkTransitions(script.segments)));
   // Deck fingerprint: the source pptx must not have changed since parse/draft.
   const fingerprintFile = Bun.file("build/deck-fingerprint.txt");
   if (await fingerprintFile.exists()) {
@@ -130,7 +153,7 @@ async function main() {
   await Bun.write("build/script-qa.md", renderQaMarkdown(report));
   console.log(`REVIEW PASSED — ${script.segments.length} segments ready for render`);
   console.log(`[qa] 文字稿报告 → build/script-qa.md`);
-  console.log(`[qa] 音色 ${report.voice.id} | 多音字/异读词 ${report.totals.polyphones} 处 | 超长句 ${report.totals.longClauses} 段 | 英文串 ${report.totals.latinTokens} 个`);
+  console.log(`[qa] 音色 ${report.voice.id} | 多音字/异读词 ${report.totals.polyphones} 处 | 超长句 ${report.totals.longClauses} 段 | 英文串 ${report.totals.latinTokens} 个 | 段间无承接 ${report.transitionGaps} 处`);
   console.log("[qa] agent 须按 build/script-qa.md 的「LLM 自审清单」逐项确认（通顺性/悦听/内容符合性）后再 render");
 }
 
