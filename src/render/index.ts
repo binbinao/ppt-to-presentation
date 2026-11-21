@@ -56,6 +56,8 @@ async function main() {
     script: sorted,
     // slide -> audio path map; compositions resolve by slide field.
     audio: Object.fromEntries([...audioLookup.entries()].map(([slide, p]) => [slide, p])),
+    // PPT2VID_SUBTITLES=0 burns no caption bar — clean page images only.
+    subtitles: process.env.PPT2VID_SUBTITLES !== "0",
   });
 
   // This machine: webpack bundler hangs, remotion.config.ts breaks CLI startup,

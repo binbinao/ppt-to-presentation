@@ -120,30 +120,38 @@ bun run review build/script.json
 ## 步骤 4 — render：合成视频
 
 ```bash
-REMOTION_BROWSER="<chrome-headless-shell 路径>" bun run render build/script.json
+PPT2VID_SUBTITLES=0 REMOTION_BROWSER="<chrome-headless-shell 路径>" bun run render build/script.json
 ```
 
 脚本自动：按选定音色逐段 edge-tts 合成（单段失败自动重试 4 次并校验时长）、ffprobe 回填 `durationSec`、Remotion 按页渲染、ffmpeg 拼接 → `output/video.mp4`。
 
 字幕条取自**该页旁白首句**（截断到 26 字），而非 `slide.title`——企业模板常把「腾讯集团」放在每页第一个形状里，当字幕会 16 页全一样。
 
+**不烧字幕**（用户偏好，本 skill 的标准命令都要带此开关）：PPT 生成的介绍视频画面应为干净页图，不要字幕条。渲染与 QA 都读 `PPT2VID_SUBTITLES`：
+- `PPT2VID_SUBTITLES=0` → 不烧字幕，`qa` 跳过字幕唯一性/长度检查并在报告注明"已按用户要求关闭"。**本 skill 的 render 与 qa 一律带 `PPT2VID_SUBTITLES=0`**，这是默认交付形态。
+- 代码层 `!== "0"` 才开字幕：这意味着**不传该开关会烧字幕**。所以务必显式传 `PPT2VID_SUBTITLES=0`；仅当**用户明确要求**要字幕时，才省略它（或传 `PPT2VID_SUBTITLES=1`）打开字幕条。
+
+```bash
+PPT2VID_SUBTITLES=0 bun run render build/script.json   # 干净页图，无字幕条（标准做法）
+```
+
 ## 步骤 5 — qa：成片 review
 
 ```bash
-bun run qa
+PPT2VID_SUBTITLES=0 bun run qa
 ```
 
 产出：
-- `build/video-qa.md` — **音画同步**（成片时长 vs 分段合计漂移、音轨覆盖、逐页抽帧成功数）+ **观览合适性**（字幕唯一性/长度、黑屏检测、逐页时间轴）
+- `build/video-qa.md` — **音画同步**（成片时长 vs 分段合计漂移、音轨覆盖、逐页抽帧成功数）+ **观览合适性**（黑屏检测、逐页时间轴；若开了字幕再加字幕唯一性/长度，默认关闭时不查字幕）
 - `build/qa-contact-sheet.jpg` — 每页中点抽帧的 4×N 拼图，作为目视证据
 
 你（agent）必须：
 1. 看 `build/video-qa.md` 的客观指标，确认 PASS
-2. **用 vision 打开拼图**，逐页目视确认：页面切换正确、无黑屏/花屏/裁切、字幕条可见且各页不同、页面停留时长够读
+2. **用 vision 打开拼图**，逐页目视确认：页面切换正确、无黑屏/花屏/裁切、页面停留时长够读（若开了字幕，再确认字幕条可见且各页不同；默认无字幕则确认画面干净、无残留字幕条）
 3. **试听**（有条件时）：抽查多音字风险词、数字、英文专名实际读音，以及句间停顿是否自然
 4. 观感/节奏/音画贴合等主观项写进交付说明，无法靠数值判定
 
-> 客观检查 ≠ 全部通过：字幕唯一性是按当前 script + 渲染逻辑的预测值，不是从视频 OCR；页面观感、读音对错必须靠目视 + 试听。
+> 客观检查 ≠ 全部通过：字幕唯一性（若开启）是按当前 script + 渲染逻辑的预测值，不是从视频 OCR；页面观感、读音对错必须靠目视 + 试听。
 
 ## References
 
@@ -168,4 +176,4 @@ bun run qa
 - `segments[].slide` 必须覆盖 1..slideCount，无重复、无缺页——`draft`/`review` 强制校验
 - `durationSec` 由 render 自动回填，写稿时不要手填
 - 中间产物在 `build/`，最终视频在 `output/`；每步可独立重跑
-- 字幕内容来自 narration，改字幕=改讲稿首句
+- 字幕内容来自 narration，改字幕=改讲稿首句；**默认 `PPT2VID_SUBTITLES=0` 不烧字幕、QA 不查字幕**，只有用户明确要字幕才打开

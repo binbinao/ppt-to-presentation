@@ -128,7 +128,7 @@ describe("checkTransitions — 清单式硬起拦截", () => {
       { slide: 1, narration: "开场。" },
       { slide: 2, narration: "另外还有菊花。菊花在秋天开放。" },
     ]);
-    expect(rows[1].connector).toBeNull();
+    expect(rows[1]!.connector).toBeNull();
     expect(transitionProblems(rows).length).toBe(1);
   });
 

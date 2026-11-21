@@ -70,12 +70,16 @@ async function main() {
   if (!astream) problems.push("缺少音轨");
   else if (audioGap > 1.5) problems.push(`音轨覆盖不足：视频 ${videoDur.toFixed(1)}s vs 音频 ${audioDur.toFixed(1)}s，差 ${audioGap.toFixed(1)}s`);
 
-  // Viewing suitability: subtitles must be distinct & short (else bar overflows)
+  // Viewing suitability: subtitles must be distinct & short (else bar overflows).
+  // PPT2VID_SUBTITLES=0 means the caption bar is intentionally absent — skip.
+  const subtitlesOn = process.env.PPT2VID_SUBTITLES !== "0";
   const subs = rows.map((r) => r.subtitle);
   const distinct = new Set(subs).size;
-  if (distinct < rows.length) problems.push(`字幕重复：${rows.length} 页仅 ${distinct} 种字幕（疑似套用页眉）`);
   const tooLong = subs.filter((s) => Array.from(s).length > 28);
-  if (tooLong.length) problems.push(`${tooLong.length} 页字幕超过 28 字，可能溢出字幕条`);
+  if (subtitlesOn) {
+    if (distinct < rows.length) problems.push(`字幕重复：${rows.length} 页仅 ${distinct} 种字幕（疑似套用页眉）`);
+    if (tooLong.length) problems.push(`${tooLong.length} 页字幕超过 28 字，可能溢出字幕条`);
+  }
 
   // Black/near-black frame detection via ffmpeg signalstats mean luma.
   let blackFrames = 0;
@@ -130,29 +134,37 @@ async function main() {
   L.push("");
   L.push("## 观览合适性");
   L.push("");
-  L.push(`- 字幕唯一性：${distinct}/${rows.length} 页字幕各不相同 ${distinct === rows.length ? "✅" : "❌（若全一样说明套用了页眉）"}`);
-  L.push(`- 字幕长度：超 28 字的 ${tooLong.length} 页 ${tooLong.length === 0 ? "✅" : "❌"}`);
+  if (subtitlesOn) {
+    L.push(`- 字幕唯一性：${distinct}/${rows.length} 页字幕各不相同 ${distinct === rows.length ? "✅" : "❌（若全一样说明套用了页眉）"}`);
+    L.push(`- 字幕长度：超 28 字的 ${tooLong.length} 页 ${tooLong.length === 0 ? "✅" : "❌"}`);
+  } else {
+    L.push(`- 字幕：**已按用户要求关闭**（PPT2VID_SUBTITLES=0），画面为干净页图，无字幕条 ✅`);
+  }
   L.push(`- 黑屏/近黑帧：${blackFrames} 页 ${blackFrames === 0 ? "✅" : "❌"}`);
   L.push("- 页面切换与画面观感：见 `build/qa-contact-sheet.jpg`（每页中点抽帧拼图），由 agent 目视确认。");
   L.push("");
   L.push("## 逐页时间轴 / 字幕");
   L.push("");
-  L.push("| 页 | 起 | 止 | 时长 | 字幕 |");
-  L.push("|---:|---:|---:|---:|---|");
-  for (const r of rows) L.push(`| ${r.slide} | ${r.startSec.toFixed(1)}s | ${r.endSec.toFixed(1)}s | ${r.durationSec.toFixed(1)}s | ${r.subtitle.replace(/\|/g, "\\|")} |`);
+  L.push(subtitlesOn ? "| 页 | 起 | 止 | 时长 | 字幕 |" : "| 页 | 起 | 止 | 时长 |");
+  L.push(subtitlesOn ? "|---:|---:|---:|---:|---|" : "|---:|---:|---:|---:|");
+  for (const r of rows) {
+    L.push(subtitlesOn
+      ? `| ${r.slide} | ${r.startSec.toFixed(1)}s | ${r.endSec.toFixed(1)}s | ${r.durationSec.toFixed(1)}s | ${r.subtitle.replace(/\|/g, "\\|")} |`
+      : `| ${r.slide} | ${r.startSec.toFixed(1)}s | ${r.endSec.toFixed(1)}s | ${r.durationSec.toFixed(1)}s |`);
+  }
   L.push("");
   L.push("## 结论");
   L.push("");
   if (problems.length === 0) L.push("**PASS** — 客观检查全部通过；页面观感请以拼图目视复核为准。");
   else { L.push(`**需复核（${problems.length} 项）**`); problems.forEach((p, i) => L.push(`${i + 1}. ${p}`)); }
   L.push("");
-  L.push("> LLM 复核项：音画是否同步观感、字幕是否与旁白/页面内容贴合、页面停留时长是否够读、");
+  L.push("> LLM 复核项：音画是否同步观感" + (subtitlesOn ? "、字幕是否与旁白/页面内容贴合" : "") + "、页面停留时长是否够读、");
   L.push("> 有无花屏/裁切/文字错乱、整体节奏是否适合观看。这些无法靠数值判定，须看拼图+试听。");
 
   await Bun.write("build/video-qa.md", L.join("\n") + "\n");
   console.log(`[qa] 成片报告 → build/video-qa.md`);
   console.log(`[qa] 拼图 → build/qa-contact-sheet.jpg`);
-  console.log(`[qa] 时长漂移 ${drift.toFixed(2)}s | 音轨差 ${audioGap.toFixed(2)}s | 字幕 ${distinct}/${rows.length} 唯一 | 黑帧 ${blackFrames}`);
+  console.log(`[qa] 时长漂移 ${drift.toFixed(2)}s | 音轨差 ${audioGap.toFixed(2)}s | 字幕 ${subtitlesOn ? distinct + "/" + rows.length + " 唯一" : "已关闭"} | 黑帧 ${blackFrames}`);
   if (problems.length) {
     console.error(`[qa] 需复核 ${problems.length} 项：`);
     problems.forEach((p, i) => console.error(`  ${i + 1}. ${p}`));

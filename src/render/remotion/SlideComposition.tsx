@@ -26,6 +26,8 @@ export const SlideComposition: React.FC<SlideProps> = ({ slide: slideNumber }) =
     outline: { slides: Array<{ slide: number; title: string; image: string }> };
     script: { segments: Array<{ slide: number; narration: string; durationSec?: number }> };
     audio: Record<number, string>;
+    // PPT2VID_SUBTITLES=0 skips the caption bar (see render/index.ts).
+    subtitles?: boolean;
   }>();
 
   const seg = input.script?.segments.find((s) => s.slide === slideNumber);
@@ -46,21 +48,23 @@ export const SlideComposition: React.FC<SlideProps> = ({ slide: slideNumber }) =
     <AbsoluteFill>
       <Audio src={staticFile(audioAssetPath(audioPath))} />
       <Img src={staticFile(slideAssetPath(slide.image))} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
-      <div
-        style={{
-          position: "absolute",
-          bottom: 40,
-          left: 40,
-          right: 40,
-          background: "rgba(0,0,0,0.55)",
-          color: "white",
-          padding: "12px 20px",
-          borderRadius: 8,
-          fontSize: 26,
-        }}
-      >
-        {subtitle}
-      </div>
+      {input.subtitles === false ? null : (
+        <div
+          style={{
+            position: "absolute",
+            bottom: 40,
+            left: 40,
+            right: 40,
+            background: "rgba(0,0,0,0.55)",
+            color: "white",
+            padding: "12px 20px",
+            borderRadius: 8,
+            fontSize: 26,
+          }}
+        >
+          {subtitle}
+        </div>
+      )}
     </AbsoluteFill>
   );
 };
